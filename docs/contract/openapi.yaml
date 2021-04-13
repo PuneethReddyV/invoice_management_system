@@ -1,0 +1,791 @@
+openapi: 3.0.2
+info:
+  description: |-
+    Invoice management system that is used to store the invoices, send reminders to the customers for open invoices. Multiple businesses would use this system to send the invoices to their customers.
+  title: Invoice management system
+  version: v0.1
+servers:
+  - url: http://localhost:8080
+    variables:
+      tld:
+        default: net
+      basePath:
+        default: '/v1'
+paths:
+  '/business_invocie/{uuid}':
+    get:
+      summary: Get AlL Innvoices For a Business Client
+      description: |-
+        Return all the open/closed invoices of a business client, due date of invoices can be on or within specific days intevals.
+
+        Filtering can be done on one or more of the following parameters:
+         - customer_uuid,
+         - invoice_uuid
+      parameters:
+        - $ref: '#/components/parameters/uuid'
+        - $ref: '#/components/parameters/due'
+        - $ref: '#/components/parameters/interval'
+        - $ref: '#/components/parameters/invoice_status'
+      responses:
+        '200':
+          description: All invocies for a given business client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessInvoices'
+        '404':
+          description: Business resource not found.
+        '422':
+          description: Unprocessable entity. Validation of the query parameters failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/customer_invoice/{uuid}':
+    get:
+      summary: Get AlL Innvoices For a Customer
+      description: |-
+        Return all the open/closed invoices of a customer, due date of invoices can be on or within specific days intevals.
+      parameters:
+        - $ref: '#/components/parameters/uuid'
+        - $ref: '#/components/parameters/due'
+        - $ref: '#/components/parameters/interval'
+        - $ref: '#/components/parameters/invoice_status'
+      responses:
+        '200':
+          description: All invocies for a given client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerInvoices'
+        '404':
+          description: Client reesource not found.
+        '422':
+          description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/users':
+    post:
+      summary: Create New Customer
+      description: This operation creates a new customer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewCustomer'
+      responses:
+        '200':
+          description: API returns a new customer UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedCustomer'
+        '422':
+          description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/business':
+    post:
+      summary: Create New Business
+      description: This operation creates a new business entity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewBusiness'
+      responses:
+        '200':
+          description: API returns a new business UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedBusiness'
+        '422':
+          description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/items':
+    post:
+      summary: Create New Items
+      description: This operation creates a new items.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewItem'
+      responses:
+        '200':
+          description: API returns a new items UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedItem'
+        '422':
+          description: Missing or invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/invoices':
+    post:
+      summary: Create New Invoices
+      description: This operation creates a new invoices.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewInvoice'
+      responses:
+        '200':
+          description: API returns a new invoice UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedInvoice'
+        '404':
+          description: |-
+            One of the following problems occurred:
+              - customer not found,
+              - business not found, or
+              - items not found.
+        '422':
+          description: |-
+            One of the following problems occurred:
+              - malformed json structure, or
+              - missing body parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/notification':
+    patch:
+      summary: Update Notifications For Specific Customer or Business
+      description: |-
+        This operation disable or enable the reminders for specific customers or business.
+      responses:
+        '200':
+          description: |-
+            Returns disable or enable the reminders for specific customers or business.
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/UpdatedNotifications'
+        '404':
+          description: |-
+            One of the following problems occurred:
+              - customer not found, or
+              - business not found.
+        '422':
+          description: |-
+            One of the following problems occurred:
+              - malformed json structure,
+              - missing body parameters, or
+              - customer is not associated with business.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotifications'
+components:
+  parameters:
+    uuid:
+      name: uuid
+      in: path
+      required: true
+      description: Resource UUID.
+      schema:
+        type: string
+        format: uuid
+    due:
+      name: due
+      in: query
+      required: true
+      description: Due with in X days or due on X days or over X days.
+      example:
+        - due within 7 days will return all invocies for upcoming 7 days including today.
+        - due within -7 days will return all invocies for past 7 days including today.
+        - due on 0 days will return all invocies for the current date.
+        - due on 4 days will return all invocies for 4 days from todays date.
+        - due on -4 days will return all invocies for 4 days past todays date.
+      schema:
+        type: string
+        enum:
+          - on
+          - within
+    invoice_status:
+      name: payment_status
+      in: query
+      required: false
+      description: Type of invoice payment status default is 'un_paid'.
+      schema:
+        type: string
+        enum:
+          - paid
+          - un_paid
+    interval:
+      name: interval
+      in: query
+      required: true
+      description: Time interval in days.
+      schema:
+        type: integer
+  schemas:
+    Error:
+      type: object
+      properties:
+        error_oid:
+          type: string
+        message:
+          type: string
+    Items:
+      description: Items details.
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Item resource UUID.
+        name:
+          type: string
+          description: Item name.
+        price:
+          type: number
+          format: double
+          description: Cost of the item.
+        quantity:
+          type: integer
+          description: quantity of this item.
+      example:
+        {
+          "name": "Soap",
+          "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+          "price": 35.8,
+          "quantity": 2
+        }
+    invoices:
+      description: Invoice details.
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Invoice resource UUID.
+        total:
+          type: number
+          format: double
+          description: Total amount.
+        payment_status:
+          description: Invoice payment status
+          items:
+            $ref: '#/components/parameters/invoice_status'
+        due_date:
+          type: string
+          format: date
+          nullable: false
+          description: Due date in X days from current date.
+        message:
+          type: string
+          description: Message to be displayed for the customer.
+        items:
+          type: array
+          description: Items of this invoice
+          items:
+            $ref: '#/components/schemas/Items'
+      example:
+        {
+          "due_date": "2021-04-03",
+          "items": [
+          {
+            "name": "Tooth Paste",
+            "price": 79.8,
+            "quantity": 3,
+            "uuid": "eb266919-022f-4163-aec3-45f30b27ed20"
+          },
+          {
+            "name": "Soap",
+            "price": 35,
+            "quantity": 2,
+            "uuid": "0937fc86-1a63-4a52-bf7a-c0089aaed499"
+          }
+          ],
+          "message": "Send SMS/EMAIL remainder after due date by 10 days.",
+          "payment_status": "un_paid",
+          "total": 309.4,
+          "uuid": "6477b4c2-f2e4-4870-82ce-63245896816f"
+        }
+    CustomerBillingInfomation:
+      description: Customer and invoces details.
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Customer resource UUID.
+        name:
+          type: string
+          format: uuid
+          description: Customer name.
+        contact_number:
+          type: string
+          description: Customer mobile contact number.
+        email_id:
+          type: string
+          description: Electronic mail id.
+        customer_invoices:
+          description: Customer Invoices.
+          type: array
+          items:
+            $ref: '#/components/schemas/invoices'
+      example:
+        {
+          "contact_number": "9035625794",
+          "customer_invoices": [
+          {
+            "due_date": "2021-04-03",
+            "items": [
+            {
+              "name": "Tooth Paste",
+              "price": 79.8,
+              "quantity": 3,
+              "uuid": "eb266919-022f-4163-aec3-45f30b27ed20"
+            },
+            {
+              "name": "Soap",
+              "price": 35,
+              "quantity": 2,
+              "uuid": "0937fc86-1a63-4a52-bf7a-c0089aaed499"
+            }
+            ],
+            "message": "Send SMS/EMAIL remainder after due date by 10 days.",
+            "payment_status": "un_paid",
+            "total": 309.4,
+            "uuid": "6477b4c2-f2e4-4870-82ce-63245896816f"
+          }
+          ],
+          "email_address": "puneethv@domain.com",
+          "name": "Puneeth",
+          "uuid": "2d93a779-a736-4d88-b28d-cbefe883b53e"
+        }
+    BusinessInvoices:
+      description: Invoices for X interval days.
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Business resource UUID.
+        name:
+          type: string
+          description: Company name.
+        customers:
+          type: array
+          description: List of customers and their invoices details.
+          items:
+            $ref: '#/components/schemas/CustomerBillingInfomation'
+      example:
+        {
+          "customers": [
+          {
+            "contact_number": "9035625794",
+            "customer_invoices": [
+            {
+              "due_date": "2021-04-03",
+              "items": [
+              {
+                "name": "Tooth Paste",
+                "price": 79.8,
+                "quantity": 3,
+                "uuid": "eb266919-022f-4163-aec3-45f30b27ed20"
+              },
+              {
+                "name": "Soap",
+                "price": 35,
+                "quantity": 2,
+                "uuid": "0937fc86-1a63-4a52-bf7a-c0089aaed499"
+              }
+              ],
+              "message": "Send SMS/EMAIL remainder after due date by 10 days.",
+              "payment_status": "un_paid",
+              "total": 309.4,
+              "uuid": "6477b4c2-f2e4-4870-82ce-63245896816f"
+            }
+            ],
+            "email_address": "puneethv@domain.com",
+            "name": "Puneeth",
+            "uuid": "2d93a779-a736-4d88-b28d-cbefe883b53e"
+          }
+          ],
+          "name": "D-Mart",
+          "uuid": "3ebaf5ca-5f8c-44f3-9206-a61b8f4d57d1"
+        }
+
+    Business:
+      description: Business and invoces details.
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Business resource UUID.
+        name:
+          type: string
+          format: uuid
+          description: Company name.
+        business_invoices:
+          $ref: '#/components/schemas/invoices'
+      example:
+        {
+          "business_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+          "invoice_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a235",
+          "company_name": "D-Mart",
+          "meessage": "Send SMS reminder before due date by 7 days",
+          "due_date": "2021-04-13",
+          "total": 130.6,
+          "items": [
+          {
+            "name": "Soap",
+            "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a238",
+            "price": 35.8,
+            "quantity": 2
+          },
+          {
+            "name": "Tooth Paste",
+            "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a239",
+            "price": 59,
+            "quantity": 1
+          }
+          ]
+        }
+    CustomerInvoices:
+      description:  Invoices for X interval days.
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Customer resource UUID.
+        name:
+          type: string
+          description: Customer name.
+        contact_number:
+          type: string
+          description: Customer mobile contact number.
+        email_id:
+          type: string
+          description: Electronic mail id.
+        businesss:
+          type: array
+          description: List of busines and their invoices details.
+          items:
+            $ref: '#/components/schemas/Business'
+      example:
+        {
+          "businesss": [
+          {
+            "business_invoices": [
+            {
+              "due_date": "2021-04-03",
+              "items": [
+              {
+                "name": "Tooth Paste",
+                "price": 79.8,
+                "quantity": 3,
+                "uuid": "eb266919-022f-4163-aec3-45f30b27ed20"
+              },
+              {
+                "name": "Soap",
+                "price": 35,
+                "quantity": 2,
+                "uuid": "0937fc86-1a63-4a52-bf7a-c0089aaed499"
+              }
+              ],
+              "message": "Send SMS/EMAIL remainder after due date by 10 days.",
+              "payment_status": "un_paid",
+              "total": 309.4,
+              "uuid": "6477b4c2-f2e4-4870-82ce-63245896816f"
+            }
+            ],
+            "name": "D-Mart",
+            "uuid": "3ebaf5ca-5f8c-44f3-9206-a61b8f4d57d1"
+          }
+          ],
+          "contact_number": "9035625794",
+          "email_address": "puneethv@domain.com",
+          "name": "Puneeth",
+          "uuid": "2d93a779-a736-4d88-b28d-cbefe883b53e"
+        }
+
+    NewCustomer:
+      type: object
+      required:
+        - name
+        - phone_number
+        - email_id
+      properties:
+        name:
+          type: string
+          description: customer name.
+        phone_number:
+          type: string
+          description: phone number.
+        email_id:
+          type: string
+          description: valid email id.
+      example:
+        {
+          "name": "Puneeth Vangala",
+          "phone_number": "9035625794",
+          "email_id": "puneethv@domain.com"
+        }
+    CreatedCustomer:
+      type: object
+      properties:
+        contract_uuid:
+          type: string
+          format: uuid
+          description: customer UUID.
+      example:
+        {
+          "customer_uuid": "1824da0a-4c15-4e81-a94c-000b0536e1de"
+        }
+
+    NewBusiness:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: business name.
+      example:
+        {
+          "name": "D-Mart"
+        }
+    CreatedBusiness:
+      type: object
+      properties:
+        business_uuid:
+          type: string
+          format: uuid
+          description: customer UUID.
+      example:
+        {
+          "business_uuid": "1824da0a-4c15-4e81-a94c-000b0536e1de"
+        }
+
+    NewItem:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        name:
+          type: string
+          description: business name.
+        price:
+          type: number
+          format: double
+          description: price of this item.
+      example:
+        {
+          "name": "soap",
+          "price": 35.8
+        }
+    CreatedItem:
+      type: object
+      properties:
+        item_uuid:
+          type: string
+          format: uuid
+          description: item UUID.
+      example:
+        {
+          "item_uuid": "1824da0a-4c15-4e81-a94c-000b0536e1de"
+        }
+
+    UpdateNotifications:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        customer_uuid:
+          type: string
+          format: uuid
+          description: customer resource uuid.
+        business_uuid:
+          type: string
+          format: uuid
+          description: business resource uuid.
+        enabled:
+          type: boolean
+          format: double
+          description: set true to enable notification.
+      example:
+        {
+          "customer_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23a",
+          "business_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+          "enabled": true
+        }
+    UpdatedNotifications:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        customer_uuid:
+          type: string
+          format: uuid
+          description: customer resource uuid.
+        business_uuid:
+          type: string
+          format: uuid
+          description: business resource uuid.
+        enabled:
+          type: boolean
+          format: double
+          description: true when notifications are enabled.
+      example:
+        {
+          "customer_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23a",
+          "business_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+          "enabled": true
+        }
+
+    NewInvoicesItems:
+      description: Items details in new invoice.
+      type: object
+      required:
+        - uuid
+        - quantity
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Item resource UUID.
+        quantity:
+          type: integer
+          description: quantity of this item.
+      example:
+        {
+          "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+          "quantity": 2
+        }
+    NewInvoiceCustomerAndItemsInformation:
+      description: Customer and item details for a new invoice.
+      type: object
+      required:
+        - customer_uuid
+        - total
+        - due_date
+        - items
+        - status
+      properties:
+        customer_uuid:
+          type: string
+          format: uuid
+          description: Customer resource UUID.
+        total:
+          type: number
+          format: double
+          description: Total amount.
+        due_date:
+          type: string
+          format: date
+          pattern: dd-MM-yyyy
+          example: 21-07-2021
+          nullable: false
+          description: Due date to pay this invoice.
+        status:
+          type: string
+          description: status of the invoice
+          enum:
+            - paid
+            - un_paid
+        items:
+          type: array
+          description: Items of this invoice
+          items:
+            $ref: '#/components/schemas/NewInvoicesItems'
+      example:
+        {
+          "customer_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+          "total" : 130.6,
+          "due_date": "2021-04-13",
+          "status": open,
+          "items": [
+          {
+            "name": "Soap",
+            "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a238",
+            "price": 35.8,
+            "quantity": 2
+          },
+          {
+            "name": "Tooth Paste",
+            "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a239",
+            "price": 59,
+            "quantity": 1
+          }
+          ]
+        }
+    NewInvoice:
+      type: object
+      required:
+        - business_uuid
+        - customer_invoices
+      description: Create new invoice for customer(s).
+      properties:
+        business_uuid:
+          type: string
+          format: uuid
+          description: Business resource UUID.
+        customer_invoices:
+          type: array
+          description: List of customer and their invoices details.
+          items:
+            $ref: '#/components/schemas/NewInvoiceCustomerAndItemsInformation'
+      example:
+        {
+          "business_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+          "customer_invoices": [
+          {
+            "customer_uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a23f",
+            "total" : 130.6,
+            "due_date": "2021-04-13",
+            "status": "open",
+            "items": [
+            {
+              "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a238",
+              "quantity": 2
+            },
+            {
+              "uuid": "b8f17ac4-65b7-449b-ae4d-e8b897c9a239",
+              "quantity": 1
+            }
+            ]
+          }
+          ]
+        }
+    CreatedInvoice:
+      type: object
+      properties:
+        item_uuid:
+          type: string
+          format: uuid
+          description: Created invoice UUID.
+      example:
+        {
+          "invoice_uuid": "1824da0a-4c15-4e81-a94c-000b0536e1de"
+        }

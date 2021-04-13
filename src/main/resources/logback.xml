@@ -1,0 +1,18 @@
+<configuration>
+
+  <property name="COMPONENT" value="Invoice Management"/>
+  <property name="COMPONENT_VERSION" value="2021.1.0"/>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+  </appender>
+
+  <appender name="PLAIN_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %message%n%xException{10}</pattern>
+    </encoder>
+  </appender>
+
+  <root level="${LOG_LEVEL:-INFO}">
+    <appender-ref ref="${LOG_APPENDER:-PLAIN_STDOUT}"/>
+  </root>
+
+</configuration>
